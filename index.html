@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh_CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator By Wink Zhang</title>
+    <script>
+        const key = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "*", "/", ".", "C", "AC", "+-"];
+        const precedenceLevel = {
+            "+": 1,
+            "-": 1,
+            "*": 2,
+            "/": 2,
+            "~": 3,
+        };
+        window.onload = () => {
+            generateKeyboard();
+        }
+        // 全局变量。
+        // 表达式。
+        let expression = "";
+        // 输出格式化表达式
+        let outputExpression = "";
+        // 正负号，当 plusMinus 为1时，为正数。
+        let plusMinus = 1;
+
+        function generateKeyboard() {
+            key.forEach((e, i) => {
+                let element = document.createElement("button");
+                element.innerText = e;
+                switch (e) {
+                    case 'C': element.onclick = () => { removeValue(); }; break;
+                    case "AC": element.onclick = () => { cleanValue(); }; break;
+                    case "+-": element.onclick = () => { changeValue(); }; break;
+                    default: element.onclick = () => { inputValue(e); }
+                }
+                $("keyboard").append(element);
+            })
+
+        }
+        function changeValue() {
+            if (expression[expression.length - 1] == '~') {
+                expression = expression.substring(0, expression.length - 1);
+            }
+            else
+                expression += '~';
+            flush();
+        }
+        function inputValue(value) {
+            expression += value
+            flush();
+        }
+        function removeValue() {
+            let value = expression.substring(0, expression.length - 1);
+            expression = value ? value : "";
+            flush();
+        }
+        function cleanValue() {
+            expression = "";
+            flush();
+        }
+        function flush() {
+            $("cal_input").value = expression;
+            $("cal_output").value = exportAnswer();
+        }
+        function $(id) {
+            return document.getElementById(id);
+        }
+        // 判断一个字符是不是数字
+        function isNum(num) {
+            return /^[0-9]+.?[0-9]*$/.test(num) || num.includes(".");
+        }
+        // 计算结果
+        function calculate(operator, character1, character2) {
+            let num1 = Number.parseFloat(character1); //last in
+            let num2 = Number.parseFloat(character2); //first in
+            let sum = 0;
+            switch (operator) {
+                case "+":
+                    sum = num2 + num1;
+                    break;
+                case "-":
+                    sum = num2 - num1;
+                    break;
+                case "*":
+                    sum = num2 * num1;
+                    break;
+                case "/":
+                    sum = num2 / num1;
+                    break;
+            }
+            return sum;
+        }
+        function exportAnswer() {
+            let expressionArray = expression.split("");
+            let numStack = [];
+            let operatorStack = [];
+            // 如果第一个输入的就是 + / 那么就 第一个数字为0
+            // 循环扫描表达式入栈。
+            let character = "";
+            for (let i = 0; i < expressionArray.length; i++) {
+                character += expressionArray[i];
+                if (isNum(character)) {
+                    if (i + 1 < expressionArray.length && isNum(expressionArray[i + 1])) {
+                        continue;
+                    } else {
+                        numStack.push(Number.parseFloat(character));
+                        character = "";
+                    }
+                } else {
+                    if (operatorStack.length == 0) {
+                        operatorStack.push(character);
+                    } else {
+                        if (
+                            precedenceLevel[character] <=
+                            precedenceLevel[operatorStack[operatorStack.length - 1]]
+                        ) {
+                            if (operatorStack[operatorStack.length - 1] == '~') {
+                                numStack.push(-numStack.pop());
+                                operatorStack.pop();
+                            }
+                            else {
+                                numStack.push(
+                                    calculate(operatorStack.pop(), numStack.pop(), numStack.pop())
+                                );
+                            }
+                            operatorStack.push(character);
+                        } else operatorStack.push(character);
+                    }
+                    character = "";
+                }
+            }
+            // 扫描完成后取剩余操作数。
+            for (let i = operatorStack.length - 1; i >= 0; i--) {
+                if (operatorStack[operatorStack.length - 1] == '~') {
+                    numStack.push(-numStack.pop());
+                    operatorStack.pop();
+                }
+                else {
+                    numStack.push(calculate(operatorStack[i], numStack.pop(), numStack.pop()));
+                }
+            }
+            return numStack[0]
+        }
+    </script>
+</head>
+
+<body>
+    <input id="cal_input" disabled />
+    <input id="cal_output" value="0" disabled />
+    <div id="keyboard"></div>
+</body>
+
+</html>
