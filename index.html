@@ -6,13 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculator By Wink Zhang</title>
     <script>
-        const key = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "*", "/", ".", "C", "AC", "+-"];
+        const key = ["C", "+/-", "%", "÷", "7", "8", "9", "x", "4", "5", "6", "-", "1", "2", "3", "+", "0", ".", "="];
         const precedenceLevel = {
             "+": 1,
             "-": 1,
-            "*": 2,
-            "/": 2,
+            "x": 2,
+            "÷": 2,
             "~": 3,
+            "%": 3,
         };
         window.onload = () => {
             generateKeyboard();
@@ -27,14 +28,25 @@
 
         function generateKeyboard() {
             key.forEach((e, i) => {
-                let element = document.createElement("button");
+                let element = document.createElement("div");
                 element.innerText = e;
                 switch (e) {
                     case 'C': element.onclick = () => { removeValue(); }; break;
                     case "AC": element.onclick = () => { cleanValue(); }; break;
-                    case "+-": element.onclick = () => { changeValue(); }; break;
+                    case "+/-": element.onclick = () => { changeValue(); }; break;
+                    case "=": element.onclick = () => { flush(); }; break;
                     default: element.onclick = () => { inputValue(e); }
                 }
+                if (e == 'C' || e == "+/-" || e == '%') {
+                    element.classList.add('key_grey');
+                }
+                else if (e == '÷' || e == "x" || e == "-" || e == "+" || e == "=") {
+                    element.classList.add("key_yellow");
+                }
+                else {
+                    element.classList.add("key_default")
+                }
+                element.id = 'key_' + e;
                 $("keyboard").append(element);
             })
 
@@ -45,24 +57,24 @@
             }
             else
                 expression += '~';
-            flush();
         }
         function inputValue(value) {
-            expression += value
-            flush();
+            if (expression.length < 13)
+                expression += value
+            $("cal_input").innerText = expression;
         }
         function removeValue() {
             let value = expression.substring(0, expression.length - 1);
             expression = value ? value : "";
-            flush();
+            $("cal_input").innerText = expression;
         }
         function cleanValue() {
             expression = "";
-            flush();
+            $("cal_input").innerText = expression;
         }
         function flush() {
-            $("cal_input").value = expression;
-            $("cal_output").value = exportAnswer();
+            let result = exportAnswer();
+            $("cal_output").innerText = result;
         }
         function $(id) {
             return document.getElementById(id);
@@ -83,10 +95,10 @@
                 case "-":
                     sum = num2 - num1;
                     break;
-                case "*":
+                case "x":
                     sum = num2 * num1;
                     break;
-                case "/":
+                case "÷":
                     sum = num2 / num1;
                     break;
             }
@@ -120,6 +132,10 @@
                                 numStack.push(-numStack.pop());
                                 operatorStack.pop();
                             }
+                            else if (operatorStack[operatorStack.length - 1] == '%') {
+                                numStack.push(numStack.pop() / 100);
+                                operatorStack.pop();
+                            }
                             else {
                                 numStack.push(
                                     calculate(operatorStack.pop(), numStack.pop(), numStack.pop())
@@ -137,6 +153,10 @@
                     numStack.push(-numStack.pop());
                     operatorStack.pop();
                 }
+                else if (operatorStack[operatorStack.length - 1] == '%') {
+                    numStack.push(numStack.pop() / 100);
+                    operatorStack.pop();
+                }
                 else {
                     numStack.push(calculate(operatorStack[i], numStack.pop(), numStack.pop()));
                 }
@@ -147,9 +167,156 @@
 </head>
 
 <body>
-    <input id="cal_input" disabled />
-    <input id="cal_output" value="0" disabled />
-    <div id="keyboard"></div>
+    <div class="cal_container">
+        <div class="top_container">
+            <div>
+                中国移动
+            </div>
+            <div>
+                9:00
+            </div>
+            <div>
+                20%
+            </div>
+        </div>
+        <div class="value_container">
+            <div id="cal_input"></div>
+            <div id="cal_output"></div>
+        </div>
+        <div id="keyboard"></div>
+    </div>
 </body>
+<style>
+    body {
+        margin: 0px;
+        padding: 0px;
+        background-color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+
+    .cal_container {
+        background-color: black;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        margin-top: 30px;
+        width: 16.5rem;
+        height: 32rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-shadow: grey 3px 3px 10px;
+        margin-bottom: 30px;
+    }
+
+    .value_container {
+        flex: 1;
+        display: flex;
+        color: white;
+        text-align: end;
+        font-size: 1.5rem;
+        flex-direction: column;
+        width: 17.5rem;
+    }
+
+    .top_container {
+        display: flex;
+        height: 1rem;
+        color: white;
+        width: 100%;
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+    }
+
+    .top_container :nth-child(2) {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        right: 0.4rem;
+    }
+
+    .top_container>div {
+        font-size: 0.5rem;
+        font-weight: 500;
+        height: 1rem;
+    }
+
+    .value_container>div {
+        flex: 1;
+        font-size: 3rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        width: 15.5rem;
+        white-space: nowrap;
+    }
+
+    #keyboard {
+        display: grid;
+        grid-template-columns: 3.5rem 3.5rem 3.5rem 3.5rem;
+        grid-row-gap: 0.5rem;
+        grid-column-gap: 0.5rem;
+        height: 20rem;
+        margin-top: 1.5rem;
+    }
+
+    #keyboard>div {
+        width: 3.5rem;
+        height: 3.5rem;
+        border-radius: 2rem;
+        font-size: 1.3rem;
+        text-align: center;
+        line-height: 3.5rem;
+        font-weight: 600;
+    }
+
+    #keyboard>div:active {
+        background-color: cornsilk;
+    }
+
+    .key_grey {
+        color: black;
+        background-color: #a6a6a6;
+    }
+
+    .key_grey:hover {
+        background-color: #d9d9d9;
+    }
+
+    .key_yellow {
+        background-color: #ff9f0a;
+        color: white;
+    }
+
+    .key_yellow:hover {
+        background-color: #fcc78d;
+    }
+
+    .key_default {
+        background-color: #323333;
+        color: white;
+    }
+
+    .key_default:hover {
+        background-color: #737373;
+    }
+
+    #key_\+\/- {
+        font-size: 1rem !important;
+        font-weight: 700;
+    }
+
+    #key_x {
+        font-size: 1.2rem !important;
+    }
+
+    #key_0 {
+        grid-column: span 2;
+        width: 6rem !important;
+        text-align: left !important;
+        padding-left: 1.5rem;
+    }
+</style>
 
 </html>
