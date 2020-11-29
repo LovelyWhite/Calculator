@@ -1,55 +1,52 @@
 <!DOCTYPE html>
-<html lang="zh_CN">
+<html lang='zh_CN'>
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <title>Calculator By Wink Zhang</title>
     <script>
-        const key = ["C", "+/-", "%", "÷", "7", "8", "9", "x", "4", "5", "6", "-", "1", "2", "3", "+", "0", ".", "="];
+        const key = ['C', '+/-', '%', '÷', '7', '8', '9', 'x', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', '='];
         const precedenceLevel = {
-            "+": 1,
-            "-": 1,
-            "x": 2,
-            "÷": 2,
-            "~": 4,
-            "%": 4,
+            '+': 1,
+            '-': 1,
+            'x': 2,
+            '÷': 2,
+            '~': 4,
+            '%': 4,
 
         };
         window.onload = () => {
             generateKeyboard();
+            $('cal_output').ondblclick = () => { cleanValue() };
         }
         // 全局变量。
         // 表达式。
-        let expression = "";
+        let expression = '';
         // 正负号，当 plusMinus 为1时，为正数。
         let plusMinus = 1;
 
         function generateKeyboard() {
             key.forEach((e, i) => {
-                let element = document.createElement("div");
+                let element = document.createElement('div');
                 element.innerText = e;
                 switch (e) {
-                    case 'C':
-                        element.onclick = () => { removeValue(); };
-                        element.on
-                        break;
-                    case "AC": element.onclick = () => { cleanValue(); }; break;
-                    case "+/-": element.onclick = () => { changeValue(); }; break;
-                    case "=": element.onclick = () => { exportAns(); }; break;
+                    case 'C': element.onclick = () => { removeValue(); }; break;
+                    case '+/-': element.onclick = () => { changeValue(); }; break;
+                    case '=': element.onclick = () => { exportAns(); }; break;
                     default: element.onclick = () => { inputValue(e); }
                 }
-                if (e == 'C' || e == "+/-" || e == '%') {
+                if (e == 'C' || e == '+/-' || e == '%') {
                     element.classList.add('key_grey');
                 }
-                else if (e == '÷' || e == "x" || e == "-" || e == "+" || e == "=") {
-                    element.classList.add("key_yellow");
+                else if (e == '÷' || e == 'x' || e == '-' || e == '+' || e == '=') {
+                    element.classList.add('key_yellow');
                 }
                 else {
-                    element.classList.add("key_default")
+                    element.classList.add('key_default')
                 }
                 element.id = 'key_' + e;
-                $("keyboard").append(element);
+                $('keyboard').append(element);
             })
 
         }
@@ -57,10 +54,10 @@
             let expressionArray = expression.split('');
             if (Object.keys(precedenceLevel).includes(expressionArray[expressionArray.length - 1])) {
 
-                if(expressionArray[expressionArray.length - 1] == '~'){
+                if (expressionArray[expressionArray.length - 1] == '~') {
                     expressionArray.pop();
                 }
-                else{
+                else {
                     expressionArray.push('~');
                 }
             } else {
@@ -93,41 +90,41 @@
         }
         function removeValue() {
             let value = expression.substring(0, expression.length - 1);
-            expression = value ? value : "";
+            expression = value ? value : '';
             flush()
         }
         function cleanValue() {
-            expression = "";
+            expression = '';
             flush()
         }
         function formatFontSize(str) {
             if (str.length < 7) {
-                $("cal_output").style.fontSize = '4rem'
+                $('cal_output').style.fontSize = '4rem'
             }
             else if (str.length == 7 || str.length == 8) {
-                $("cal_output").style.fontSize = '3rem'
+                $('cal_output').style.fontSize = '3rem'
             }
             else {
-                $("cal_output").style.fontSize = '2.5rem'
+                $('cal_output').style.fontSize = '2.5rem'
             }
         }
         function flush() {
             formatFontSize(expression);
             if (expression.length == 0) {
-                $("cal_output").innerText = "0";
+                $('cal_output').innerText = '0';
             }
-            else { $("cal_output").innerText = expression.substring(expression.length - 12, expression.length).replaceAll('~', '-'); }
+            else { $('cal_output').innerText = expression.substring(expression.length - 12, expression.length).replaceAll('~', '-'); }
         }
         function exportAns() {
             let result = exportAnswer();
-            if (isNaN(result) || !isFinite(result)) {
-                $("cal_output").innerText = "错误"
-                formatFontSize("错误");
-                expression = "";
+            if (isNaN(result[0]) || !isFinite(result[0]) || result.length > 1) {
+                $('cal_output').innerText = '错误'
+                formatFontSize('错误');
+                expression = '';
                 return;
             }
             console.log('Exact Number=' + result);
-            let resultStr = "";
+            let resultStr = '';
             if (result != 0 && (result >= 999999999 || Math.abs(result) <= 0.00000001) || result.toString().length > 9) {
                 let flagZero = false;
                 if (result < 0) {
@@ -145,17 +142,16 @@
                 while (n[n.length - 1] == '0' || n[n.length - 1] == '.') {
                     n = n.substring(0, n.length - 1);
                 }
-                resultStr = (flagZero ? '-' : "") + n + 'e' + p;
+                resultStr = (flagZero ? '-' : '') + n + (p != 0 ? 'e' + p : '');
             }
             else {
                 resultStr = result.toString();
             }
             if (undefined == result) {
-                $("cal_output").innerText = "0";
+                $('cal_output').innerText = '0';
             }
             else {
-                $("cal_output").innerText = resultStr;
-                resultStr = resultStr.replaceAll('-', '~');
+                $('cal_output').innerText = resultStr;
             }
             formatFontSize(resultStr);
         }
@@ -164,38 +160,38 @@
         }
         function fixDiv(a, b) {
             let aFix = 0, bFix = 0, aMulti, bMulti;
-            try { aFix += a.toString().split(".")[1].length } catch (e) { }
-            try { bFix += b.toString().split(".")[1].length } catch (e) { }
-            aMulti = Number(a.toString().replace(".", ""));
-            bMulti = Number(b.toString().replace(".", ""));
+            try { aFix += a.toString().split('.')[1].length } catch (e) { }
+            try { bFix += b.toString().split('.')[1].length } catch (e) { }
+            aMulti = Number(a.toString().replace('.', ''));
+            bMulti = Number(b.toString().replace('.', ''));
             return fixMulti(aMulti / bMulti, Math.pow(10, bFix - aFix));
         }
         function fixMulti(a, b) {
             let fix = 0, aMulti, bMulti;
-            try { fix += a.toString().split(".")[1].length } catch (e) { }
-            try { fix += b.toString().split(".")[1].length } catch (e) { }
-            aMulti = Number(a.toString().replace(".", ""));
-            bMulti = Number(b.toString().replace(".", ""));
+            try { fix += a.toString().split('.')[1].length } catch (e) { }
+            try { fix += b.toString().split('.')[1].length } catch (e) { }
+            aMulti = Number(a.toString().replace('.', ''));
+            bMulti = Number(b.toString().replace('.', ''));
             return aMulti * bMulti / Math.pow(10, fix);
         }
         function fixAdd(a, b) {
             let aFix = 0, bFix = 0, fix = 0;
-            try { aFix = a.toString().split(".")[1].length } catch (e) { }
-            try { bFix = b.toString().split(".")[1].length } catch (e) { }
+            try { aFix = a.toString().split('.')[1].length } catch (e) { }
+            try { bFix = b.toString().split('.')[1].length } catch (e) { }
             fix = Math.pow(10, Math.max(aFix, bFix));
             return (a * fix + b * fix) / fix;
         }
         function fixSub(a, b) {
             let aFix = 0, bFix = 0, fix = 0;
-            try { aFix = a.toString().split(".")[1].length } catch (e) { }
-            try { bFix = b.toString().split(".")[1].length } catch (e) { }
+            try { aFix = a.toString().split('.')[1].length } catch (e) { }
+            try { bFix = b.toString().split('.')[1].length } catch (e) { }
             let max = Math.max(aFix, bFix);
             fix = Math.pow(10, max);
             return ((a * fix - b * fix) / fix).toFixed(max);
         }
         // 判断一个字符是不是数字
         function isNum(num) {
-            return /^[0-9]+.?[0-9]*$/.test(num) || num.includes(".");
+            return /^[0-9]+.?[0-9]*$/.test(num) || num.includes('.');
         }
         // 计算结果
         function calculate(operator, character1, character2) {
@@ -203,16 +199,16 @@
             let num2 = Number.parseFloat(character2); //first in
             let sum = 0;
             switch (operator) {
-                case "+":
+                case '+':
                     sum = fixAdd(num2, num1);
                     break;
-                case "-":
+                case '-':
                     sum = fixSub(num2, num1);
                     break;
-                case "x":
+                case 'x':
                     sum = fixMulti(num2, num1);
                     break;
-                case "÷":
+                case '÷':
                     sum = fixDiv(num2, num1);
                     break;
             }
@@ -220,12 +216,12 @@
         }
         function exportAnswer() {
             console.log('Expression=' + expression);
-            let expressionArray = expression.split("");
+            let expressionArray = expression.split('');
             let numStack = [];
             let operatorStack = [];
             // 如果第一个输入的就是 + / 那么就 第一个数字为0
             // 循环扫描表达式入栈。
-            let character = "";
+            let character = '';
             for (let i = 0; i < expressionArray.length; i++) {
                 character += expressionArray[i];
                 if (isNum(character)) {
@@ -233,7 +229,7 @@
                         continue;
                     } else {
                         numStack.push(Number.parseFloat(character));
-                        character = "";
+                        character = '';
                     }
                 } else {
                     if (operatorStack.length == 0) {
@@ -260,7 +256,7 @@
                             operatorStack.push(character);
                         } else operatorStack.push(character);
                     }
-                    character = "";
+                    character = '';
                 }
             }
             // 扫描完成后取剩余操作数。
@@ -277,14 +273,14 @@
                     numStack.push(calculate(operatorStack[i], numStack.pop(), numStack.pop()));
                 }
             }
-            return numStack[0]
+            return numStack
         }
     </script>
 </head>
 
 <body>
-    <div class="cal_container">
-        <div class="top_container">
+    <div class='cal_container'>
+        <div class='top_container'>
             <div>
                 中国移动
             </div>
@@ -295,14 +291,14 @@
                 20%
             </div>
         </div>
-        <div class="value_container">
+        <div class='value_container'>
             <code></code>
-            <code id="cal_output">0</code>
+            <code id='cal_output'>0</code>
         </div>
-        <div id="keyboard"></div>
+        <div id='keyboard'></div>
     </div>
     <div>
-        <p style="color:grey;font-size:small">Copyright ©2020 wink.zhang, All Rights Reserved.</p>
+        <p style='color:grey;font-size:small'>Copyright ©2020 wink.zhang, All Rights Reserved.</p>
     </div>
 </body>
 <style>
