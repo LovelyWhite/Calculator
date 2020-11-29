@@ -12,8 +12,9 @@
             "-": 1,
             "x": 2,
             "÷": 2,
-            "~": 3,
-            "%": 3,
+            "~": 4,
+            "%": 4,
+
         };
         window.onload = () => {
             generateKeyboard();
@@ -21,8 +22,6 @@
         // 全局变量。
         // 表达式。
         let expression = "";
-        // 输出格式化表达式
-        let outputExpression = "";
         // 正负号，当 plusMinus 为1时，为正数。
         let plusMinus = 1;
 
@@ -31,10 +30,13 @@
                 let element = document.createElement("div");
                 element.innerText = e;
                 switch (e) {
-                    case 'C': element.onclick = () => { removeValue(); }; break;
+                    case 'C':
+                        element.onclick = () => { removeValue(); };
+                        element.on
+                        break;
                     case "AC": element.onclick = () => { cleanValue(); }; break;
                     case "+/-": element.onclick = () => { changeValue(); }; break;
-                    case "=": element.onclick = () => { flush(); }; break;
+                    case "=": element.onclick = () => { exportAns(); }; break;
                     default: element.onclick = () => { inputValue(e); }
                 }
                 if (e == 'C' || e == "+/-" || e == '%') {
@@ -52,32 +54,144 @@
 
         }
         function changeValue() {
-            if (expression[expression.length - 1] == '~') {
-                expression = expression.substring(0, expression.length - 1);
+            let expressionArray = expression.split('');
+            if (Object.keys(precedenceLevel).includes(expressionArray[expressionArray.length - 1])) {
+
+                if(expressionArray[expressionArray.length - 1] == '~'){
+                    expressionArray.pop();
+                }
+                else{
+                    expressionArray.push('~');
+                }
+            } else {
+                let index = expressionArray.lastIndexOf('~');
+                let position = -1;
+                if (index == -1) {
+                    for (let i = expressionArray.length; i >= 0; i--) {
+                        if (Object.keys(precedenceLevel).includes(expressionArray[i])) {
+                            position = i;
+                            break;
+                        }
+                    }
+                    if (position == -1) {
+                        expressionArray.splice(0, 0, '~');
+                    }
+                    else {
+                        expressionArray.splice(position + 1, 0, '~');
+                    }
+                }
+                else {
+                    expressionArray.splice(index, 1);
+                }
             }
-            else
-                expression += '~';
+            expression = expressionArray.toString().replaceAll(',', '');
+            flush()
         }
         function inputValue(value) {
-            if (expression.length < 13)
-                expression += value
-            $("cal_input").innerText = expression;
+            expression += value
+            flush()
         }
         function removeValue() {
             let value = expression.substring(0, expression.length - 1);
             expression = value ? value : "";
-            $("cal_input").innerText = expression;
+            flush()
         }
         function cleanValue() {
             expression = "";
-            $("cal_input").innerText = expression;
+            flush()
+        }
+        function formatFontSize(str) {
+            if (str.length < 7) {
+                $("cal_output").style.fontSize = '4rem'
+            }
+            else if (str.length == 7 || str.length == 8) {
+                $("cal_output").style.fontSize = '3rem'
+            }
+            else {
+                $("cal_output").style.fontSize = '2.5rem'
+            }
         }
         function flush() {
+            formatFontSize(expression);
+            if (expression.length == 0) {
+                $("cal_output").innerText = "0";
+            }
+            else { $("cal_output").innerText = expression.substring(expression.length - 12, expression.length).replaceAll('~', '-'); }
+        }
+        function exportAns() {
             let result = exportAnswer();
-            $("cal_output").innerText = result;
+            if (isNaN(result) || !isFinite(result)) {
+                $("cal_output").innerText = "错误"
+                formatFontSize("错误");
+                expression = "";
+                return;
+            }
+            console.log('Exact Number=' + result);
+            let resultStr = "";
+            if (result != 0 && (result >= 999999999 || Math.abs(result) <= 0.00000001) || result.toString().length > 9) {
+                let flagZero = false;
+                if (result < 0) {
+                    result = -result;
+                    flagZero = true;
+                }
+                let p = Math.floor(Math.log(result) / Math.LN10);
+                let n = result * Math.pow(10, -p);
+                let pLen = p.toString().length;
+                let fixLen = 10 - pLen;
+                if (p < 0) fixLen--;
+                if (n < 0) fixLen--;
+                n = n.toFixed(fixLen);
+                n = n.toString();
+                while (n[n.length - 1] == '0' || n[n.length - 1] == '.') {
+                    n = n.substring(0, n.length - 1);
+                }
+                resultStr = (flagZero ? '-' : "") + n + 'e' + p;
+            }
+            else {
+                resultStr = result.toString();
+            }
+            if (undefined == result) {
+                $("cal_output").innerText = "0";
+            }
+            else {
+                $("cal_output").innerText = resultStr;
+                resultStr = resultStr.replaceAll('-', '~');
+            }
+            formatFontSize(resultStr);
         }
         function $(id) {
             return document.getElementById(id);
+        }
+        function fixDiv(a, b) {
+            let aFix = 0, bFix = 0, aMulti, bMulti;
+            try { aFix += a.toString().split(".")[1].length } catch (e) { }
+            try { bFix += b.toString().split(".")[1].length } catch (e) { }
+            aMulti = Number(a.toString().replace(".", ""));
+            bMulti = Number(b.toString().replace(".", ""));
+            return fixMulti(aMulti / bMulti, Math.pow(10, bFix - aFix));
+        }
+        function fixMulti(a, b) {
+            let fix = 0, aMulti, bMulti;
+            try { fix += a.toString().split(".")[1].length } catch (e) { }
+            try { fix += b.toString().split(".")[1].length } catch (e) { }
+            aMulti = Number(a.toString().replace(".", ""));
+            bMulti = Number(b.toString().replace(".", ""));
+            return aMulti * bMulti / Math.pow(10, fix);
+        }
+        function fixAdd(a, b) {
+            let aFix = 0, bFix = 0, fix = 0;
+            try { aFix = a.toString().split(".")[1].length } catch (e) { }
+            try { bFix = b.toString().split(".")[1].length } catch (e) { }
+            fix = Math.pow(10, Math.max(aFix, bFix));
+            return (a * fix + b * fix) / fix;
+        }
+        function fixSub(a, b) {
+            let aFix = 0, bFix = 0, fix = 0;
+            try { aFix = a.toString().split(".")[1].length } catch (e) { }
+            try { bFix = b.toString().split(".")[1].length } catch (e) { }
+            let max = Math.max(aFix, bFix);
+            fix = Math.pow(10, max);
+            return ((a * fix - b * fix) / fix).toFixed(max);
         }
         // 判断一个字符是不是数字
         function isNum(num) {
@@ -90,21 +204,22 @@
             let sum = 0;
             switch (operator) {
                 case "+":
-                    sum = num2 + num1;
+                    sum = fixAdd(num2, num1);
                     break;
                 case "-":
-                    sum = num2 - num1;
+                    sum = fixSub(num2, num1);
                     break;
                 case "x":
-                    sum = num2 * num1;
+                    sum = fixMulti(num2, num1);
                     break;
                 case "÷":
-                    sum = num2 / num1;
+                    sum = fixDiv(num2, num1);
                     break;
             }
             return sum;
         }
         function exportAnswer() {
+            console.log('Expression=' + expression);
             let expressionArray = expression.split("");
             let numStack = [];
             let operatorStack = [];
@@ -128,6 +243,7 @@
                             precedenceLevel[character] <=
                             precedenceLevel[operatorStack[operatorStack.length - 1]]
                         ) {
+                            // 可以优化成单目运算符
                             if (operatorStack[operatorStack.length - 1] == '~') {
                                 numStack.push(-numStack.pop());
                                 operatorStack.pop();
@@ -180,10 +296,13 @@
             </div>
         </div>
         <div class="value_container">
-            <div id="cal_input"></div>
-            <div id="cal_output"></div>
+            <code></code>
+            <code id="cal_output">0</code>
         </div>
         <div id="keyboard"></div>
+    </div>
+    <div>
+        <p style="color:grey;font-size:small">Copyright ©2020 wink.zhang, All Rights Reserved.</p>
     </div>
 </body>
 <style>
@@ -218,7 +337,9 @@
         text-align: end;
         font-size: 1.5rem;
         flex-direction: column;
-        width: 17.5rem;
+        margin-left: 1rem;
+        margin-right: 1rem;
+        width: 100%;
     }
 
     .top_container {
@@ -241,22 +362,24 @@
         font-size: 0.5rem;
         font-weight: 500;
         height: 1rem;
+        user-select: none;
     }
 
-    .value_container>div {
+    .value_container>code {
         flex: 1;
-        font-size: 3rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
-        width: 15.5rem;
+        font-size: 4rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
         white-space: nowrap;
+        position: relative;
+        bottom: 0rem;
     }
 
     #keyboard {
         display: grid;
         grid-template-columns: 3.5rem 3.5rem 3.5rem 3.5rem;
         grid-row-gap: 0.5rem;
-        grid-column-gap: 0.5rem;
+        grid-column-gap: 0.6rem;
         height: 20rem;
         margin-top: 1.5rem;
     }
@@ -269,11 +392,10 @@
         text-align: center;
         line-height: 3.5rem;
         font-weight: 600;
+        user-select: none;
     }
 
-    #keyboard>div:active {
-        background-color: cornsilk;
-    }
+
 
     .key_grey {
         color: black;
@@ -282,6 +404,10 @@
 
     .key_grey:hover {
         background-color: #d9d9d9;
+    }
+
+    .key_grey:active {
+        background-color: #dfdfdf;
     }
 
     .key_yellow {
