@@ -1,444 +1,578 @@
 <!DOCTYPE html>
-<html lang='zh_CN'>
-
-<head>
-    <meta charset='UTF-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<html lang="zh_CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Calculator By Wink Zhang</title>
     <script>
-        const key = ['C', '+/-', '%', '÷', '7', '8', '9', 'x', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', '='];
-        const precedenceLevel = {
-            '+': 1,
-            '-': 1,
-            'x': 2,
-            '÷': 2,
-            '~': 4,
-            '%': 4,
-
+      const key = [
+        'C',
+        '+/-',
+        '%',
+        '÷',
+        '7',
+        '8',
+        '9',
+        'x',
+        '4',
+        '5',
+        '6',
+        '-',
+        '1',
+        '2',
+        '3',
+        '+',
+        '0',
+        '.',
+        '=',
+      ];
+      const precedenceLevel = {
+        '+': {
+          level: 1,
+          type: 'binary',
+        },
+        '-': {
+          level: 1,
+          type: 'binary',
+        },
+        'x': {
+          level: 2,
+          type: 'binary',
+        },
+        '÷': {
+          level: 2,
+          type: 'binary',
+        },
+        '~': {
+          level: 3,
+          type: 'unary',
+        },
+        '%': {
+          level: 3,
+          type: 'unary',
+        },
+      };
+      let expression = '';
+      let exactValue = 0;
+      window.onload = () => {
+        generateKeyboard();
+        $('cal_output').ondblclick = () => {
+          cleanValue();
         };
-        window.onload = () => {
-            generateKeyboard();
-            $('cal_output').ondblclick = () => { cleanValue() };
+      };
+
+      function getPrecedenceLevel(operator) {
+        return precedenceLevel[operator] ? precedenceLevel[operator].level : -1;
+      }
+
+      function getOperatorType(operator) {
+        if (precedenceLevel[operator]) {
+          return precedenceLevel[operator].type;
         }
-        // 全局变量。
-        // 表达式。
-        let expression = '';
-        // 正负号，当 plusMinus 为1时，为正数。
-        let plusMinus = 1;
+        throw new Exception('no such operator');
+      }
 
-        function generateKeyboard() {
-            key.forEach((e, i) => {
-                let element = document.createElement('div');
-                element.innerText = e;
-                switch (e) {
-                    case 'C': element.onclick = () => { removeValue(); }; break;
-                    case '+/-': element.onclick = () => { changeValue(); }; break;
-                    case '=': element.onclick = () => { exportAns(); }; break;
-                    default: element.onclick = () => { inputValue(e); }
-                }
-                if (e == 'C' || e == '+/-' || e == '%') {
-                    element.classList.add('key_grey');
-                }
-                else if (e == '÷' || e == 'x' || e == '-' || e == '+' || e == '=') {
-                    element.classList.add('key_yellow');
-                }
-                else {
-                    element.classList.add('key_default')
-                }
-                element.id = 'key_' + e;
-                $('keyboard').append(element);
-            })
+      /**
+       * 生成键盘，并绑定事件。
+       */
+      function generateKeyboard() {
+        key.forEach((e, i) => {
+          let element = document.createElement('div');
+          element.innerText = e;
+          switch (e) {
+            case 'C':
+              element.onclick = () => {
+                removeValue();
+              };
+              break;
+            case '+/-':
+              element.onclick = () => {
+                switchPlusMinus();
+              };
+              break;
+            case '=':
+              element.onclick = () => {
+                formatAnswer();
+              };
+              break;
+            default:
+              element.onclick = () => {
+                inputValue(e);
+              };
+          }
+          if (e == 'C' || e == '+/-' || e == '%') {
+            element.classList.add('key_grey');
+          } else if (e == '÷' || e == 'x' || e == '-' || e == '+' || e == '=') {
+            element.classList.add('key_yellow');
+          } else {
+            element.classList.add('key_default');
+          }
+          element.id = 'key_' + e;
+          $('keyboard').append(element);
+        });
+      }
 
-        }
-        function changeValue() {
-            let expressionArray = expression.split('');
-            if (Object.keys(precedenceLevel).includes(expressionArray[expressionArray.length - 1])) {
-
-                if (expressionArray[expressionArray.length - 1] == '~') {
-                    expressionArray.pop();
-                }
-                else {
-                    expressionArray.push('~');
-                }
+      /**
+       * 切换正负号，用～代替负号以区分减号。
+       */
+      function switchPlusMinus() {
+        let expressionArray = expression.split('');
+        if (
+          Object.keys(precedenceLevel).includes(
+            expressionArray[expressionArray.length - 1]
+          )
+        ) {
+          if (expressionArray[expressionArray.length - 1] == '~') {
+            expressionArray.pop();
+          } else {
+            expressionArray.push('~');
+          }
+        } else {
+          let index = expressionArray.lastIndexOf('~');
+          let position = -1;
+          if (index == -1) {
+            for (let i = expressionArray.length; i >= 0; i--) {
+              if (Object.keys(precedenceLevel).includes(expressionArray[i])) {
+                position = i;
+                break;
+              }
+            }
+            if (position == -1) {
+              expressionArray.splice(0, 0, '~');
             } else {
-                let index = expressionArray.lastIndexOf('~');
-                let position = -1;
-                if (index == -1) {
-                    for (let i = expressionArray.length; i >= 0; i--) {
-                        if (Object.keys(precedenceLevel).includes(expressionArray[i])) {
-                            position = i;
-                            break;
-                        }
-                    }
-                    if (position == -1) {
-                        expressionArray.splice(0, 0, '~');
-                    }
-                    else {
-                        expressionArray.splice(position + 1, 0, '~');
-                    }
-                }
-                else {
-                    expressionArray.splice(index, 1);
-                }
+              expressionArray.splice(position + 1, 0, '~');
             }
-            expression = expressionArray.toString().replaceAll(',', '');
-            flush()
+          } else {
+            expressionArray.splice(index, 1);
+          }
         }
-        function inputValue(value) {
-            expression += value
-            flush()
-        }
-        function removeValue() {
-            let value = expression.substring(0, expression.length - 1);
-            expression = value ? value : '';
-            flush()
-        }
-        function cleanValue() {
-            expression = '';
-            flush()
-        }
-        function formatFontSize(str) {
-            if (str.length < 7) {
-                $('cal_output').style.fontSize = '4rem'
-            }
-            else if (str.length == 7 || str.length == 8) {
-                $('cal_output').style.fontSize = '3rem'
-            }
-            else {
-                $('cal_output').style.fontSize = '2.5rem'
-            }
-        }
-        function flush() {
-            formatFontSize(expression);
-            if (expression.length == 0) {
-                $('cal_output').innerText = '0';
-            }
-            else { $('cal_output').innerText = expression.substring(expression.length - 12, expression.length).replaceAll('~', '-'); }
-        }
-        function exportAns() {
-            let result = exportAnswer();
-            if (isNaN(result[0]) || !isFinite(result[0]) || result.length > 1) {
-                $('cal_output').innerText = '错误'
-                formatFontSize('错误');
-                expression = '';
-                return;
-            }
-            console.log('Exact Number=' + result);
-            let resultStr = '';
-            if (result != 0 && (result >= 999999999 || Math.abs(result) <= 0.00000001) || result.toString().length > 9) {
-                let flagZero = false;
-                if (result < 0) {
-                    result = -result;
-                    flagZero = true;
-                }
-                let p = Math.floor(Math.log(result) / Math.LN10);
-                let n = result * Math.pow(10, -p);
-                let pLen = p.toString().length;
-                let fixLen = 10 - pLen;
-                if (p < 0) fixLen--;
-                if (n < 0) fixLen--;
-                n = n.toFixed(fixLen);
-                n = n.toString();
-                while (n[n.length - 1] == '0' || n[n.length - 1] == '.') {
-                    n = n.substring(0, n.length - 1);
-                }
-                resultStr = (flagZero ? '-' : '') + n + (p != 0 ? 'e' + p : '');
-            }
-            else {
-                resultStr = result.toString();
-            }
-            if (undefined == result) {
-                $('cal_output').innerText = '0';
-            }
-            else {
-                $('cal_output').innerText = resultStr;
-            }
-            formatFontSize(resultStr);
-        }
-        function $(id) {
-            return document.getElementById(id);
-        }
-        function fixDiv(a, b) {
-            let aFix = 0, bFix = 0, aMulti, bMulti;
-            try { aFix += a.toString().split('.')[1].length } catch (e) { }
-            try { bFix += b.toString().split('.')[1].length } catch (e) { }
-            aMulti = Number(a.toString().replace('.', ''));
-            bMulti = Number(b.toString().replace('.', ''));
-            return fixMulti(aMulti / bMulti, Math.pow(10, bFix - aFix));
-        }
-        function fixMulti(a, b) {
-            let fix = 0, aMulti, bMulti;
-            try { fix += a.toString().split('.')[1].length } catch (e) { }
-            try { fix += b.toString().split('.')[1].length } catch (e) { }
-            aMulti = Number(a.toString().replace('.', ''));
-            bMulti = Number(b.toString().replace('.', ''));
-            return aMulti * bMulti / Math.pow(10, fix);
-        }
-        function fixAdd(a, b) {
-            let aFix = 0, bFix = 0, fix = 0;
-            try { aFix = a.toString().split('.')[1].length } catch (e) { }
-            try { bFix = b.toString().split('.')[1].length } catch (e) { }
-            fix = Math.pow(10, Math.max(aFix, bFix));
-            return (a * fix + b * fix) / fix;
-        }
-        function fixSub(a, b) {
-            let aFix = 0, bFix = 0, fix = 0;
-            try { aFix = a.toString().split('.')[1].length } catch (e) { }
-            try { bFix = b.toString().split('.')[1].length } catch (e) { }
-            let max = Math.max(aFix, bFix);
-            fix = Math.pow(10, max);
-            return ((a * fix - b * fix) / fix).toFixed(max);
-        }
-        // 判断一个字符是不是数字
-        function isNum(num) {
-            return /^[0-9]+.?[0-9]*$/.test(num) || num.includes('.');
-        }
-        // 计算结果
-        function calculate(operator, character1, character2) {
-            let num1 = Number.parseFloat(character1); //last in
-            let num2 = Number.parseFloat(character2); //first in
-            let sum = 0;
-            switch (operator) {
-                case '+':
-                    sum = fixAdd(num2, num1);
-                    break;
-                case '-':
-                    sum = fixSub(num2, num1);
-                    break;
-                case 'x':
-                    sum = fixMulti(num2, num1);
-                    break;
-                case '÷':
-                    sum = fixDiv(num2, num1);
-                    break;
-            }
-            return sum;
-        }
-        function exportAnswer() {
-            console.log('Expression=' + expression);
-            let expressionArray = expression.split('');
-            let numStack = [];
-            let operatorStack = [];
-            // 如果第一个输入的就是 + / 那么就 第一个数字为0
-            // 循环扫描表达式入栈。
-            let character = '';
-            for (let i = 0; i < expressionArray.length; i++) {
-                character += expressionArray[i];
-                if (isNum(character)) {
-                    if (i + 1 < expressionArray.length && isNum(expressionArray[i + 1])) {
-                        continue;
-                    } else {
-                        numStack.push(Number.parseFloat(character));
-                        character = '';
-                    }
-                } else {
-                    if (operatorStack.length == 0) {
-                        operatorStack.push(character);
-                    } else {
-                        if (
-                            precedenceLevel[character] <=
-                            precedenceLevel[operatorStack[operatorStack.length - 1]]
-                        ) {
-                            // 可以优化成单目运算符
-                            if (operatorStack[operatorStack.length - 1] == '~') {
-                                numStack.push(-numStack.pop());
-                                operatorStack.pop();
-                            }
-                            else if (operatorStack[operatorStack.length - 1] == '%') {
-                                numStack.push(numStack.pop() / 100);
-                                operatorStack.pop();
-                            }
-                            else {
-                                numStack.push(
-                                    calculate(operatorStack.pop(), numStack.pop(), numStack.pop())
-                                );
-                            }
-                            operatorStack.push(character);
-                        } else operatorStack.push(character);
-                    }
-                    character = '';
-                }
-            }
-            // 扫描完成后取剩余操作数。
-            for (let i = operatorStack.length - 1; i >= 0; i--) {
-                if (operatorStack[operatorStack.length - 1] == '~') {
-                    numStack.push(-numStack.pop());
-                    operatorStack.pop();
-                }
-                else if (operatorStack[operatorStack.length - 1] == '%') {
-                    numStack.push(numStack.pop() / 100);
-                    operatorStack.pop();
-                }
-                else {
-                    numStack.push(calculate(operatorStack[i], numStack.pop(), numStack.pop()));
-                }
-            }
-            return numStack
-        }
-    </script>
-</head>
+        expression = expressionArray.toString().replaceAll(',', '');
+        flush(expression);
+      }
 
-<body>
-    <div class='cal_container'>
-        <div class='top_container'>
-            <div>
-                中国移动
-            </div>
-            <div>
-                9:00
-            </div>
-            <div>
-                20%
-            </div>
-        </div>
-        <div class='value_container'>
-            <code></code>
-            <code id='cal_output'>0</code>
-        </div>
-        <div id='keyboard'></div>
+      function inputValue(value) {
+        expression += value;
+        flush(expression);
+      }
+
+      function removeValue() {
+        let value = expression.substring(0, expression.length - 1);
+        expression = value ? value : '';
+        flush(expression);
+      }
+
+      function cleanValue() {
+        expression = '';
+        exactValue = 0;
+        flush(expression);
+      }
+
+      /**
+       * 根据字体多少格式化字体大小，以适应输出框。
+       */
+      function formatFontSize(str) {
+        if (str.length < 7) {
+          $('cal_output').style.fontSize = '4rem';
+        } else if (str.length == 7 || str.length == 8) {
+          $('cal_output').style.fontSize = '3rem';
+        } else {
+          $('cal_output').style.fontSize = '2.5rem';
+        }
+      }
+
+      /**
+       * 界面刷新函数，用于将结果展示在屏幕上。在这里渲染了波浪号（～）并控制了字符长度。
+       */
+      function flush(output, input = true) {
+        formatFontSize(output);
+        if (output.length == 0) {
+          $('cal_output').innerText = '0';
+        } else {
+          let showString = input
+            ? output.substring(output.length - 12, output.length)
+            : output;
+
+          $('cal_output').innerText = showString.replaceAll('~', '-');
+        }
+        $('cal_output').title = '精确值:'+exactValue;
+      }
+
+      /**
+       * 格式化显示计算结果，在这里控制了精度以及科学计数法是否显示。
+       */
+      function formatAnswer() {
+        let result = expressionCalculate();
+        if (isNaN(result[0]) || !isFinite(result[0]) || result.length > 1) {
+          $('cal_output').innerText = '错误';
+          formatFontSize('错误');
+          expression = '';
+          return;
+        }
+        exactValue = result; // 设置精确数字。
+        let resultStr = '';
+        if (
+          (result != 0 &&
+            (result >= 999999999 || Math.abs(result) <= 0.00000001)) ||
+          result.toString().length > 9
+        ) {
+          let flagZero = false;
+          if (result < 0) {
+            result = -result;
+            flagZero = true;
+          }
+          let p = Math.floor(Math.log(result) / Math.LN10);
+          let n = result * Math.pow(10, -p);
+          let pLen = p.toString().length;
+          let fixLen = 9 - pLen;
+          if (p < 0) fixLen--;
+          if (n < 0) fixLen--;
+          n = n.toFixed(fixLen);
+          n = n.toString();
+          while (n[n.length - 1] == '0' || n[n.length - 1] == '.') {
+            n = n.substring(0, n.length - 1);
+          }
+          resultStr = (flagZero ? '-' : '') + n + (p != 0 ? 'e' + p : '');
+        } else {
+          resultStr = result.toString();
+        }
+        if (undefined == result) {
+          flush(innerText);
+        } else {
+          flush(resultStr);
+        }
+      }
+
+      function $(id) {
+        return document.getElementById(id);
+      }
+
+      /**
+       * 修复 JavaScript 计算精度问题。
+       */
+      function fixDiv(a, b) {
+        let aFix = 0,
+          bFix = 0,
+          aMulti,
+          bMulti;
+        try {
+          aFix += a.toString().split('.')[1].length;
+        } catch (e) {}
+        try {
+          bFix += b.toString().split('.')[1].length;
+        } catch (e) {}
+        aMulti = Number(a.toString().replace('.', ''));
+        bMulti = Number(b.toString().replace('.', ''));
+        return fixMulti(aMulti / bMulti, Math.pow(10, bFix - aFix));
+      }
+
+      function fixMulti(a, b) {
+        let fix = 0,
+          aMulti,
+          bMulti;
+        try {
+          fix += a.toString().split('.')[1].length;
+        } catch (e) {}
+        try {
+          fix += b.toString().split('.')[1].length;
+        } catch (e) {}
+        aMulti = Number(a.toString().replace('.', ''));
+        bMulti = Number(b.toString().replace('.', ''));
+        return (aMulti * bMulti) / Math.pow(10, fix);
+      }
+
+      function fixAdd(a, b) {
+        let aFix = 0,
+          bFix = 0,
+          fix = 0;
+        try {
+          aFix = a.toString().split('.')[1].length;
+        } catch (e) {}
+        try {
+          bFix = b.toString().split('.')[1].length;
+        } catch (e) {}
+        fix = Math.pow(10, Math.max(aFix, bFix));
+        return (a * fix + b * fix) / fix;
+      }
+
+      function fixSub(a, b) {
+        let aFix = 0,
+          bFix = 0,
+          fix = 0;
+        try {
+          aFix = a.toString().split('.')[1].length;
+        } catch (e) {}
+        try {
+          bFix = b.toString().split('.')[1].length;
+        } catch (e) {}
+        let max = Math.max(aFix, bFix);
+        fix = Math.pow(10, max);
+        return ((a * fix - b * fix) / fix).toFixed(max);
+      }
+
+      /**
+       * 判断字符串是不是数字。
+       */
+      function isNum(num) {
+        return /^[0-9]+.?[0-9]*$/.test(num) || num.includes('.');
+      }
+
+      /**
+       * 单目运算符计算方法。
+       */
+      function unaryCalculate(operator, character) {
+        switch (operator) {
+          case '%':
+            return fixDiv(character, 100);
+          case '~':
+            return -character;
+        }
+      }
+
+      /**
+       * 双目操作符计算方法。
+       */
+      function binaryCalculate(operator, character1, character2) {
+        let sum = 0;
+        switch (operator) {
+          case '+':
+            sum = fixAdd(character2, character1);
+            break;
+          case '-':
+            sum = fixSub(character2, character1);
+            break;
+          case 'x':
+            sum = fixMulti(character2, character1);
+            break;
+          case '÷':
+            sum = fixDiv(character2, character1);
+            break;
+        }
+        return sum;
+      }
+
+      /**
+       * 表达式分析计算结果。
+       */
+      function expressionCalculate() {
+        let expressionArray = expression.split('');
+        let numStack = [];
+        let operatorStack = [];
+        // 如果第一个输入的就是 + / 那么就 第一个数字为0。
+        // 循环扫描表达式入栈。
+        let character = '';
+        for (let i = 0; i < expressionArray.length; i++) {
+          character += expressionArray[i];
+          if (isNum(character)) {
+            if (
+              i + 1 < expressionArray.length &&
+              isNum(expressionArray[i + 1])
+            ) {
+              continue;
+            } else {
+              numStack.push(Number(character));
+              character = '';
+            }
+          } else {
+            if (operatorStack.length == 0) {
+              operatorStack.push(character);
+            } else {
+              if (
+                getPrecedenceLevel(character) <=
+                getPrecedenceLevel(operatorStack[operatorStack.length - 1])
+              ) {
+                if (
+                  getOperatorType(operatorStack[operatorStack.length - 1]) ==
+                  'unary'
+                ) {
+                  numStack.push(
+                    unaryCalculate(operatorStack.pop(), numStack.pop())
+                  );
+                } else {
+                  numStack.push(
+                    binaryCalculate(
+                      operatorStack.pop(),
+                      numStack.pop(),
+                      numStack.pop()
+                    )
+                  );
+                }
+                operatorStack.push(character);
+              } else operatorStack.push(character);
+            }
+            character = '';
+          }
+        }
+        // 扫描完成后取剩余操作数。
+        for (let i = operatorStack.length - 1; i >= 0; i--) {
+          if (
+            getOperatorType(operatorStack[operatorStack.length - 1]) == 'unary'
+          ) {
+            numStack.push(unaryCalculate(operatorStack.pop(), numStack.pop()));
+          } else {
+            numStack.push(
+              binaryCalculate(operatorStack[i], numStack.pop(), numStack.pop())
+            );
+          }
+        }
+        return numStack;
+      }
+    </script>
+  </head>
+
+  <body>
+    <div class="cal_container">
+      <div class="top_container">
+        <div>中国移动</div>
+        <div>9:00</div>
+        <div>20%</div>
+      </div>
+      <div class="value_container">
+        <code></code>
+        <code id="cal_output">0</code>
+      </div>
+      <div id="keyboard"></div>
     </div>
     <div>
-        <p style='color:grey;font-size:small'>Copyright ©2020 wink.zhang, All Rights Reserved.</p>
+      <p style="color: grey; font-size: small">
+        Copyright ©2020 wink.zhang, All Rights Reserved.
+      </p>
     </div>
-</body>
-<style>
+  </body>
+  <style>
     body {
-        margin: 0px;
-        padding: 0px;
-        background-color: white;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
+      margin: 0px;
+      padding: 0px;
+      background-color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
     }
 
     .cal_container {
-        background-color: black;
-        padding: 0.5rem;
-        border-radius: 0.5rem;
-        margin-top: 30px;
-        width: 16.5rem;
-        height: 32rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        box-shadow: grey 3px 3px 10px;
-        margin-bottom: 30px;
+      background-color: black;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      margin-top: 30px;
+      width: 16.5rem;
+      height: 32rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: grey 3px 3px 10px;
+      margin-bottom: 30px;
     }
 
     .value_container {
-        flex: 1;
-        display: flex;
-        color: white;
-        text-align: end;
-        font-size: 1.5rem;
-        flex-direction: column;
-        margin-left: 1rem;
-        margin-right: 1rem;
-        width: 100%;
+      flex: 1;
+      display: flex;
+      color: white;
+      text-align: end;
+      font-size: 1.5rem;
+      flex-direction: column;
+      margin-left: 1rem;
+      margin-right: 1rem;
+      width: 100%;
     }
 
     .top_container {
-        display: flex;
-        height: 1rem;
-        color: white;
-        width: 100%;
-        margin-left: 0.5rem;
-        margin-right: 0.5rem;
+      display: flex;
+      height: 1rem;
+      color: white;
+      width: 100%;
+      margin-left: 0.5rem;
+      margin-right: 0.5rem;
     }
 
     .top_container :nth-child(2) {
-        flex: 1;
-        text-align: center;
-        position: relative;
-        right: 0.4rem;
+      flex: 1;
+      text-align: center;
+      position: relative;
+      right: 0.4rem;
     }
 
-    .top_container>div {
-        font-size: 0.5rem;
-        font-weight: 500;
-        height: 1rem;
-        user-select: none;
+    .top_container > div {
+      font-size: 0.5rem;
+      font-weight: 500;
+      height: 1rem;
+      user-select: none;
     }
 
-    .value_container>code {
-        flex: 1;
-        font-size: 4rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-        white-space: nowrap;
-        position: relative;
-        bottom: 0rem;
+    .value_container > code {
+      flex: 1;
+      font-size: 4rem;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+      white-space: nowrap;
+      position: relative;
+      bottom: 0rem;
     }
 
     #keyboard {
-        display: grid;
-        grid-template-columns: 3.5rem 3.5rem 3.5rem 3.5rem;
-        grid-row-gap: 0.5rem;
-        grid-column-gap: 0.6rem;
-        height: 20rem;
-        margin-top: 1.5rem;
+      display: grid;
+      grid-template-columns: 3.5rem 3.5rem 3.5rem 3.5rem;
+      grid-row-gap: 0.5rem;
+      grid-column-gap: 0.6rem;
+      height: 20rem;
+      margin-top: 1.5rem;
     }
 
-    #keyboard>div {
-        width: 3.5rem;
-        height: 3.5rem;
-        border-radius: 2rem;
-        font-size: 1.3rem;
-        text-align: center;
-        line-height: 3.5rem;
-        font-weight: 600;
-        user-select: none;
+    #keyboard > div {
+      width: 3.5rem;
+      height: 3.5rem;
+      border-radius: 2rem;
+      font-size: 1.3rem;
+      text-align: center;
+      line-height: 3.5rem;
+      font-weight: 600;
+      user-select: none;
     }
-
-
 
     .key_grey {
-        color: black;
-        background-color: #a6a6a6;
+      color: black;
+      background-color: #a6a6a6;
     }
 
     .key_grey:hover {
-        background-color: #d9d9d9;
+      background-color: #d9d9d9;
     }
 
     .key_grey:active {
-        background-color: #dfdfdf;
+      background-color: #dfdfdf;
     }
 
     .key_yellow {
-        background-color: #ff9f0a;
-        color: white;
+      background-color: #ff9f0a;
+      color: white;
     }
 
     .key_yellow:hover {
-        background-color: #fcc78d;
+      background-color: #fcc78d;
     }
 
     .key_default {
-        background-color: #323333;
-        color: white;
+      background-color: #323333;
+      color: white;
     }
 
     .key_default:hover {
-        background-color: #737373;
+      background-color: #737373;
     }
 
     #key_\+\/- {
-        font-size: 1rem !important;
-        font-weight: 700;
+      font-size: 1rem !important;
+      font-weight: 700;
     }
 
     #key_x {
-        font-size: 1.2rem !important;
+      font-size: 1.2rem !important;
     }
 
     #key_0 {
-        grid-column: span 2;
-        width: 6rem !important;
-        text-align: left !important;
-        padding-left: 1.5rem;
+      grid-column: span 2;
+      width: 6rem !important;
+      text-align: left !important;
+      padding-left: 1.5rem;
     }
-</style>
-
+  </style>
 </html>
