@@ -1,11 +1,164 @@
 <!DOCTYPE html>
-<html lang="zh_CN">
+<html lang="zh-Hans-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Calculator By Wink Zhang</title>
+    <style>
+      html {
+        font-size: 16px;
+      }
+      body {
+        margin: 0px;
+        padding: 0px;
+        background-color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+
+      .cal-container {
+        background-color: black;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        margin-top: 30px;
+        width: 16.5rem;
+        height: 32rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-shadow: grey 3px 3px 10px;
+        margin-bottom: 30px;
+      }
+
+      .value-container {
+        flex: 1;
+        display: flex;
+        color: white;
+        text-align: end;
+        font-size: 1.5rem;
+        flex-direction: column;
+        margin-left: 1rem;
+        margin-right: 1rem;
+        width: 100%;
+      }
+
+      .top-container {
+        display: flex;
+        height: 1rem;
+        color: white;
+        width: 100%;
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+      }
+
+      .top-container :nth-child(2) {
+        flex: 1;
+        text-align: center;
+        position: relative;
+        right: 0.4rem;
+      }
+
+      .top-container > div {
+        font-size: 0.5rem;
+        font-weight: 500;
+        height: 1rem;
+        user-select: none;
+      }
+
+      .value-container > code {
+        flex: 1;
+        font-size: 3rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        white-space: nowrap;
+        position: relative;
+        bottom: 0rem;
+      }
+
+      .copyright-container {
+        color: grey;
+        font-size: small;
+      }
+
+      #keyboard {
+        display: grid;
+        grid-template-columns: 3.5rem 3.5rem 3.5rem 3.5rem;
+        grid-row-gap: 0.5rem;
+        grid-column-gap: 0.6rem;
+        height: 20rem;
+        margin-top: 1.5rem;
+      }
+
+      #keyboard > div {
+        width: 3.5rem;
+        height: 3.5rem;
+        border-radius: 2rem;
+        font-size: 1.3rem;
+        text-align: center;
+        line-height: 3.5rem;
+        font-weight: 600;
+        user-select: none;
+      }
+
+      .key-grey {
+        color: black;
+        background-color: #a6a6a6;
+      }
+
+      .key-grey:hover {
+        background-color: #d9d9d9;
+      }
+
+      .key-grey:active {
+        background-color: #ececec;
+      }
+
+      .key-yellow {
+        background-color: #ff9f0a;
+        color: white;
+      }
+
+      .key-yellow:hover {
+        background-color: #fcc78d;
+      }
+
+      .key-yellow:active {
+        background-color: #ffd7ac;
+      }
+
+      .key-default {
+        background-color: #323333;
+        color: white;
+      }
+
+      .key-default:hover {
+        background-color: #737373;
+      }
+
+      .key-default:active {
+        background-color: #939393;
+      }
+
+      #key-\+\/- {
+        font-size: 1rem !important;
+        font-weight: 700;
+      }
+
+      #key-x {
+        font-size: 1.2rem !important;
+      }
+
+      #key-0 {
+        grid-column: span 2;
+        width: 6rem !important;
+        text-align: left !important;
+        padding-left: 1.5rem;
+      }
+    </style>
     <script>
-      const key = [
+      const keys = [
         'C',
         '+/-',
         '%',
@@ -52,11 +205,13 @@
           type: 'unary',
         },
       };
+
+      const operator = ['+', '-', 'x', '÷'];
       let expression = '';
       let exactValue = 0;
       window.onload = () => {
         generateKeyboard();
-        $('cal_output').ondblclick = () => {
+        $('cal-output').ondblclick = () => {
           cleanValue();
         };
       };
@@ -73,10 +228,10 @@
       }
 
       /**
-       * 生成键盘，并绑定事件。
-       */
+      * 生成键盘，并绑定事件。
+      */
       function generateKeyboard() {
-        key.forEach((e, i) => {
+        keys.forEach((e, i) => {
           let element = document.createElement('div');
           element.innerText = e;
           switch (e) {
@@ -101,20 +256,20 @@
               };
           }
           if (e == 'C' || e == '+/-' || e == '%') {
-            element.classList.add('key_grey');
+            element.classList.add('key-grey');
           } else if (e == '÷' || e == 'x' || e == '-' || e == '+' || e == '=') {
-            element.classList.add('key_yellow');
+            element.classList.add('key-yellow');
           } else {
-            element.classList.add('key_default');
+            element.classList.add('key-default');
           }
-          element.id = 'key_' + e;
+          element.id = 'key-' + e;
           $('keyboard').append(element);
         });
       }
 
       /**
-       * 切换正负号，用～代替负号以区分减号。
-       */
+      * 切换正负号，用～代替负号以区分减号。
+      */
       function switchPlusMinus() {
         let expressionArray = expression.split('');
         if (
@@ -152,7 +307,30 @@
 
       function inputValue(value) {
         expression += value;
+        if (operator.includes(expression[0])) {
+          expression = expression.substring(0, expression.length - 1);
+          return;
+        }
+        if (checkDoubleOperator(expression)) {
+          expression = expression.substring(0, expression.length - 2);
+          expression += value;
+        }
         flush(expression);
+      }
+
+      /**
+      * 检查是否有连续的两个操作符。
+      */
+      function checkDoubleOperator(expression) {
+        for (let i = 0; i < expression.length - 1; i++) {
+          if (
+            operator.includes(expression[i]) &&
+            operator.includes(expression[i + 1])
+          ) {
+            return true;
+          }
+        }
+        return false;
       }
 
       function removeValue() {
@@ -168,42 +346,42 @@
       }
 
       /**
-       * 根据字体多少格式化字体大小，以适应输出框。
-       */
+      * 根据字体多少格式化字体大小，以适应输出框。
+      */
       function formatFontSize(str) {
         if (str.length < 7) {
-          $('cal_output').style.fontSize = '4rem';
-        } else if (str.length == 7 || str.length == 8) {
-          $('cal_output').style.fontSize = '3rem';
+          $('cal-output').style.fontSize = '3rem';
+        } else if (str.length == 7 || str.length == 8 || str.length == 9 || str.length == 10) {
+          $('cal-output').style.fontSize = '2.5rem';
         } else {
-          $('cal_output').style.fontSize = '2.5rem';
+          $('cal-output').style.fontSize = '2rem';
         }
       }
 
       /**
-       * 界面刷新函数，用于将结果展示在屏幕上。在这里渲染了波浪号（～）并控制了字符长度。
-       */
+      * 界面刷新函数，用于将结果展示在屏幕上。在这里渲染了波浪号（～）并控制了字符长度。
+      */
       function flush(output, input = true) {
         formatFontSize(output);
         if (output.length == 0) {
-          $('cal_output').innerText = '0';
+          $('cal-output').innerText = '0';
         } else {
           let showString = input
             ? output.substring(output.length - 12, output.length)
             : output;
 
-          $('cal_output').innerText = showString.replaceAll('~', '-');
+          $('cal-output').innerText = showString.replaceAll('~', '-');
         }
-        $('cal_output').title = '精确值:'+exactValue;
+        $('cal-output').title = '精确值:' + exactValue;
       }
 
       /**
-       * 格式化显示计算结果，在这里控制了精度以及科学计数法是否显示。
-       */
+      * 格式化显示计算结果，在这里控制了精度以及科学计数法是否显示。
+      */
       function formatAnswer() {
         let result = expressionCalculate();
         if (isNaN(result[0]) || !isFinite(result[0]) || result.length > 1) {
-          $('cal_output').innerText = '错误';
+          $('cal-output').innerText = '错误';
           formatFontSize('错误');
           expression = '';
           return;
@@ -247,8 +425,8 @@
       }
 
       /**
-       * 修复 JavaScript 计算精度问题。
-       */
+      * 修复 JavaScript 计算精度问题。
+      */
       function fixDiv(a, b) {
         let aFix = 0,
           bFix = 0,
@@ -260,8 +438,8 @@
         try {
           bFix += b.toString().split('.')[1].length;
         } catch (e) {}
-        aMulti = Number(a.toString().replace('.', ''));
-        bMulti = Number(b.toString().replace('.', ''));
+        aMulti = parseFloat(a.toString().replace('.', ''));
+        bMulti = parseFloat(b.toString().replace('.', ''));
         return fixMulti(aMulti / bMulti, Math.pow(10, bFix - aFix));
       }
 
@@ -275,8 +453,8 @@
         try {
           fix += b.toString().split('.')[1].length;
         } catch (e) {}
-        aMulti = Number(a.toString().replace('.', ''));
-        bMulti = Number(b.toString().replace('.', ''));
+        aMulti = parseFloat(a.toString().replace('.', ''));
+        bMulti = parseFloat(b.toString().replace('.', ''));
         return (aMulti * bMulti) / Math.pow(10, fix);
       }
 
@@ -310,15 +488,15 @@
       }
 
       /**
-       * 判断字符串是不是数字。
-       */
+      * 判断字符串是不是数字。
+      */
       function isNum(num) {
-        return /^[0-9]+.?[0-9]*$/.test(num) || num.includes('.');
+        return /^-?[0-9]*(\.[0-9]*)?$/.test(num);
       }
 
       /**
-       * 单目运算符计算方法。
-       */
+      * 单目运算符计算方法。
+      */
       function unaryCalculate(operator, character) {
         switch (operator) {
           case '%':
@@ -329,8 +507,8 @@
       }
 
       /**
-       * 双目操作符计算方法。
-       */
+      * 双目操作符计算方法。
+      */
       function binaryCalculate(operator, character1, character2) {
         let sum = 0;
         switch (operator) {
@@ -351,13 +529,12 @@
       }
 
       /**
-       * 表达式分析计算结果。
-       */
+      * 表达式分析计算结果。
+      */
       function expressionCalculate() {
         let expressionArray = expression.split('');
         let numStack = [];
         let operatorStack = [];
-        // 如果第一个输入的就是 + / 那么就 第一个数字为0。
         // 循环扫描表达式入栈。
         let character = '';
         for (let i = 0; i < expressionArray.length; i++) {
@@ -369,7 +546,7 @@
             ) {
               continue;
             } else {
-              numStack.push(Number(character));
+              numStack.push(parseFloat(character));
               character = '';
             }
           } else {
@@ -420,159 +597,22 @@
   </head>
 
   <body>
-    <div class="cal_container">
-      <div class="top_container">
+    <div class="cal-container">
+      <div class="top-container">
         <div>中国移动</div>
         <div>9:00</div>
         <div>20%</div>
       </div>
-      <div class="value_container">
+      <div class="value-container">
         <code></code>
-        <code id="cal_output">0</code>
+        <code id="cal-output">0</code>
       </div>
       <div id="keyboard"></div>
     </div>
     <div>
-      <p style="color: grey; font-size: small">
+      <p class="copyright-container">
         Copyright ©2020 wink.zhang, All Rights Reserved.
       </p>
     </div>
   </body>
-  <style>
-    body {
-      margin: 0px;
-      padding: 0px;
-      background-color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-    }
-
-    .cal_container {
-      background-color: black;
-      padding: 0.5rem;
-      border-radius: 0.5rem;
-      margin-top: 30px;
-      width: 16.5rem;
-      height: 32rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      box-shadow: grey 3px 3px 10px;
-      margin-bottom: 30px;
-    }
-
-    .value_container {
-      flex: 1;
-      display: flex;
-      color: white;
-      text-align: end;
-      font-size: 1.5rem;
-      flex-direction: column;
-      margin-left: 1rem;
-      margin-right: 1rem;
-      width: 100%;
-    }
-
-    .top_container {
-      display: flex;
-      height: 1rem;
-      color: white;
-      width: 100%;
-      margin-left: 0.5rem;
-      margin-right: 0.5rem;
-    }
-
-    .top_container :nth-child(2) {
-      flex: 1;
-      text-align: center;
-      position: relative;
-      right: 0.4rem;
-    }
-
-    .top_container > div {
-      font-size: 0.5rem;
-      font-weight: 500;
-      height: 1rem;
-      user-select: none;
-    }
-
-    .value_container > code {
-      flex: 1;
-      font-size: 4rem;
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
-      white-space: nowrap;
-      position: relative;
-      bottom: 0rem;
-    }
-
-    #keyboard {
-      display: grid;
-      grid-template-columns: 3.5rem 3.5rem 3.5rem 3.5rem;
-      grid-row-gap: 0.5rem;
-      grid-column-gap: 0.6rem;
-      height: 20rem;
-      margin-top: 1.5rem;
-    }
-
-    #keyboard > div {
-      width: 3.5rem;
-      height: 3.5rem;
-      border-radius: 2rem;
-      font-size: 1.3rem;
-      text-align: center;
-      line-height: 3.5rem;
-      font-weight: 600;
-      user-select: none;
-    }
-
-    .key_grey {
-      color: black;
-      background-color: #a6a6a6;
-    }
-
-    .key_grey:hover {
-      background-color: #d9d9d9;
-    }
-
-    .key_grey:active {
-      background-color: #dfdfdf;
-    }
-
-    .key_yellow {
-      background-color: #ff9f0a;
-      color: white;
-    }
-
-    .key_yellow:hover {
-      background-color: #fcc78d;
-    }
-
-    .key_default {
-      background-color: #323333;
-      color: white;
-    }
-
-    .key_default:hover {
-      background-color: #737373;
-    }
-
-    #key_\+\/- {
-      font-size: 1rem !important;
-      font-weight: 700;
-    }
-
-    #key_x {
-      font-size: 1.2rem !important;
-    }
-
-    #key_0 {
-      grid-column: span 2;
-      width: 6rem !important;
-      text-align: left !important;
-      padding-left: 1.5rem;
-    }
-  </style>
 </html>
